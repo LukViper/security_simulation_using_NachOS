@@ -1,43 +1,25 @@
 # This is part of a GNU Makefile, included by the Makefiles in
-# each of the subdirectories.  
-#
-# This file includes all of the baseline code provided by Nachos.
-# Whenever you add a .h or .cc file, put it in the appropriate 
-# _H,_C, or _O list.
-#
-# The dependency graph between assignments is:
-#   1. THREADS before everything else
-#   2. USERPROG must come before VM
-#   3. USERPROG can come before or after FILESYS, but if USERPROG comes 
-#	before (as in this distribution), then it must define FILESYS_STUB
-#
-#   Other than that, you have complete flexibility.
-#
-# Also whenever you change the include structure of your program, you should 
-# do a gmake depend in the subdirectory -- this will modify the Makefile
-# to keep track of the new dependency.
+# each of the subdirectories.
 
-# You might want to play with the CFLAGS, but if you use -O it may
-# break the thread system.  You might want to use -fno-inline if
-# you need to call some inline functions from the debugger.
-
-# Copyright (c) 1992 The Regents of the University of California.
-# All rights reserved.  See copyright.h for copyright notice and limitation 
-# of liability and disclaimer of warranty provisions.
-
-CFLAGS = -g -Wall -Wshadow $(INCPATH) $(DEFINES) $(HOST) -DCHANGED
-LDFLAGS =
+# Force 32-bit compilation for 64-bit host systems
+CFLAGS = -g -Wall -Wshadow -m32 $(INCPATH) $(DEFINES) $(HOST)
+LDFLAGS = -m32
+ASFLAGS = -m32 $(INCPATH) $(HOST)
 
 # These definitions may change as the software is updated.
-# Some of them are also system dependent
-CPP=/lib/cpp
+CPP = /lib/cpp
 CC = g++
 LD = g++
-AS = as
+# Use --32 for the GNU assembler
+AS = as --32
 
 PROGRAM = nachos
 
-THREAD_H =../threads/copyright.h\
+# Define the Host Architecture (Required for PCState, etc.)
+# Even on x86_64, use i386 because we are forcing 32-bit mode.
+HOST = -DHOST_i386 -DHOST_LINUX
+
+THREAD_H = ../threads/copyright.h\
 	../threads/list.h\
 	../threads/scheduler.h\
 	../threads/synch.h \
@@ -54,7 +36,7 @@ THREAD_H =../threads/copyright.h\
 	../threads/producer.h\
 	../threads/consumer.h
 
-THREAD_C =../threads/main.cc\
+THREAD_C = ../threads/main.cc\
 	../threads/scheduler.cc\
 	../threads/synch.cc \
 	../threads/system.cc\
@@ -72,7 +54,7 @@ THREAD_C =../threads/main.cc\
 
 THREAD_S = ../threads/switch.s
 
-THREAD_O =main.o scheduler.o synch.o system.o thread.o \
+THREAD_O = main.o scheduler.o synch.o system.o thread.o \
 	utility.o threadtest.o interrupt.o stats.o sysdep.o timer.o \
 	preemptive.o globalbuffer.o producer.o consumer.o
 
@@ -102,37 +84,26 @@ USERPROG_C = ../userprog/addrspace.cc\
 	../userprog/synchconsole.cc\
 	../userprog/swappage.cc
 
-
 USERPROG_O = addrspace.o bitmap.o exception.o progtest.o console.o machine.o \
 	mipssim.o translate.o memorymanager.o processtable.o synchconsole.o swappage.o
 
-VM_H = 
-VM_C = 
-VM_O = 
-
-FILESYS_H =../filesys/directory.h \
+FILESYS_H = ../filesys/directory.h \
 	../filesys/filehdr.h\
 	../filesys/filesys.h \
 	../filesys/openfile.h\
 	../filesys/synchdisk.h\
 	../machine/disk.h
-FILESYS_C =../filesys/directory.cc\
+FILESYS_C = ../filesys/directory.cc\
 	../filesys/filehdr.cc\
 	../filesys/filesys.cc\
 	../filesys/fstest.cc\
 	../filesys/openfile.cc\
 	../filesys/synchdisk.cc\
 	../machine/disk.cc
-FILESYS_O =directory.o filehdr.o filesys.o fstest.o openfile.o synchdisk.o\
+FILESYS_O = directory.o filehdr.o filesys.o fstest.o openfile.o synchdisk.o\
 	disk.o
 
-NETWORK_H = ../network/post.h ../machine/network.h
-NETWORK_C = ../network/nettest.cc ../network/post.cc ../machine/network.cc
-NETWORK_O = nettest.o post.o network.o
-
 S_OFILES = switch.o
-
-OFILES = $(C_OFILES) $(S_OFILES)
 
 $(PROGRAM): $(OFILES)
 	$(LD) $(OFILES) $(LDFLAGS) -o $(PROGRAM)
@@ -140,17 +111,7 @@ $(PROGRAM): $(OFILES)
 $(C_OFILES): %.o:
 	$(CC) $(CFLAGS) -c $<
 
+# Correctly handle the assembly for thread switching
 switch.o: ../threads/switch.s
-	$(CPP) -x assembler-with-cpp -c -P $(INCPATH) $(HOST) ../threads/switch.s > swtch.s
-#	$(AS) -o switch.o swtch.s
-
-depend: $(CFILES) $(HFILES)
-	$(CC) $(INCPATH) $(DEFINES) $(HOST) -DCHANGED -M $(CFILES) > makedep
-	echo '/^# DO NOT DELETE THIS LINE/+2,$$d' >eddep
-	echo '$$r makedep' >>eddep
-	echo 'wq' >>eddep
-	ed - Makefile < eddep
-	rm eddep makedep 
-	echo '# DEPENDENCIES MUST END AT END OF FILE' >> Makefile
-	echo '# IF YOU PUT STUFF HERE IT WILL GO AWAY' >> Makefile
-	echo '# see make depend above' >> Makefile
+	$(CPP) -x assembler-with-cpp -P $(INCPATH) $(HOST) ../threads/switch.s > swtch.s
+	$(AS) -o switch.o swtch.s

@@ -162,9 +162,12 @@ Initialize(int argc, char **argv)
 
     // We didn't explicitly allocate the current thread we are running in.
     // But if it ever tries to give up the CPU, we better have a Thread
-    // object to save its state. 
+    // object to save its state.
+    // NOTE: We must initialize the main thread's stackTop to support SWITCH()
     currentThread = new Thread("main");		
     currentThread->setStatus(RUNNING);
+    // Set stackTop to current stack pointer so SWITCH can save context
+    currentThread->stackTop = (HostMemoryAddress*)&threadToBeDestroyed; // Use a dummy address on the stack
 
     interrupt->Enable();
     CallOnUserAbort(Cleanup);			// if user hits ctl-C

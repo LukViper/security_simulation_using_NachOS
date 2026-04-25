@@ -36,6 +36,7 @@ INCDIR =-I../userprog -I../threads
 CFLAGS = -G 0 -c $(INCDIR)
 
 all: halt shell matmult sort array exittest exectest tier2 snake
+PROGRAMS = halt shell matmult sort simulate_rbac
 
 start.o: start.s ../userprog/syscall.h
 	$(CPP) $(CPPFLAGS) start.c > strt.s

@@ -102,9 +102,10 @@ Semaphore::V()
 // the test case in the network assignment won't work!
 
 Lock::Lock(const char* debugName) 
-{    
+{   name = (char *)debugName; 
     DEBUG('s', "Initializing lock named %s\n", name);
-    name = debugName;
+    
+
     lockedBy = NULL;
     queue = new List<Thread*>;
 }
