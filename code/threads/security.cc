@@ -35,6 +35,7 @@ static bool userDatabaseInitialized = false;
 static Session activeSessions[MAX_SESSIONS];
 static int sessionCount = 0;
 static int nextSessionID = 1000;
+void UnlockUserWithAdminAuth(const char* username, const char* adminPassword);
 
 // ============================================================
 // Utilities
@@ -50,6 +51,8 @@ static void InitializeUserDatabase() {
 
     userDatabase["admin"] = User{"admin", hashPassword("root123"), ADMIN, 0};
     userDatabase["user"]  = User{"user", hashPassword("password123"), USER, 0};
+    userDatabase["user1"] = User{"user1", hashPassword("password123"), USER, 0}; 
+    
     userDatabase["guest"] = User{"guest", hashPassword("guest"), GUEST, 0};
 }
 
@@ -207,23 +210,64 @@ void SimulateLoginSession(const char* username, const char* password) {
 
     printf("<<< LOGIN SESSION COMPLETE <<<\n\n");
 }
-
 void LoginSystemTest() {
-    printf("\n");
-    printf("╔═══════════════════════════════════════════════════╗\n");
-    printf("║   NACHOS SECURE LOGIN SYSTEM - RBAC SIMULATION    ║\n");
-    printf("║     (Simulation Mode - Thread-Free Execution)     ║\n");
-    printf("╚═══════════════════════════════════════════════════╝\n");
+    printf("\n=== NACHOS CLI LOGIN SYSTEM ===\n");
+    
+char username[50];
+char password[50];
 
-    SimulateLoginSession("admin", "root123");
-    SimulateLoginSession("user", "password123");
-    SimulateLoginSession("guest", "guest");
-    SimulateLoginSession("hacker", "wrongpass");
+while (true) {
+    printf("\nEnter username (or 'exit'): ");
+    scanf("%s", username);
 
-    ListActiveSessions();
+    // exit check
+    if (strcmp(username, "exit") == 0) break;
 
-    printf("╔═══════════════════════════════════════════════════╗\n");
-    printf("║          SECURITY SIMULATION COMPLETE             ║\n");
-    printf("║  All components working correctly without threads ║\n");
-    printf("╚═══════════════════════════════════════════════════╝\n\n");
+    // 🔥 HANDLE UNLOCK FIRST
+    if (strcmp(username, "unlock") == 0) {
+        char userToUnlock[50];
+        char adminPass[50];
+
+        printf("Enter user to unlock: ");
+        scanf("%s", userToUnlock);
+
+        printf("Enter ADMIN password: ");
+        scanf("%s", adminPass);
+
+        UnlockUserWithAdminAuth(userToUnlock, adminPass);
+        continue;  // skip normal login
+    }
+
+    // 👇 ONLY FOR NORMAL USERS
+    printf("Enter password: ");
+    scanf("%s", password);
+
+    SimulateLoginSession(username, password);
+}
+}
+
+void UnlockUserWithAdminAuth(const char* username, const char* adminPassword) {
+    // verify admin exists
+    auto adminIt = userDatabase.find("admin");
+    if (adminIt == userDatabase.end()) {
+        printf("[SECURITY] Admin account not found!\n");
+        return;
+    }
+
+    // verify admin password (hashed)
+    string inputHash = hashPassword(adminPassword);
+    if (inputHash != adminIt->second.passwordHash) {
+        printf("[SECURITY] Admin authentication FAILED\n");
+        return;
+    }
+
+    // now unlock target user
+    auto it = userDatabase.find(username);
+    if (it == userDatabase.end()) {
+        printf("[SECURITY] User not found: %s\n", username);
+        return;
+    }
+
+    it->second.failedAttempts = 0;
+    printf("[SECURITY] Account unlocked by ADMIN: %s\n", username);
 }
